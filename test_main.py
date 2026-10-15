@@ -1,4 +1,5 @@
-
+from io import BytesIO
+import pymupdf
 from fastapi.testclient import TestClient
 from main import app
 
@@ -17,3 +18,74 @@ def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
+
+
+
+def test_upload_valid_pdf():
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "Hello RAG PDF")
+
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    response = client.post(
+        "/upload",
+        files={
+            "file": (
+                "sample.pdf",
+                BytesIO(pdf_bytes),
+                "application/pdf",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["pages"] == 1
+    assert response.json()["total_chunks"] >= 1
+    assert "Hello RAG PDF" in response.json()["text_preview"]
+
+
+def test_reject_non_pdf():
+    response = client.post(
+        "/upload",
+        files={
+            "file": (
+                "sample.txt",
+                b"Hello",
+                "text/plain",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_reject_invalid_pdf():
+    response = client.post(
+        "/upload",
+        files={
+            "file": (
+                "fake.pdf",
+                b"not a real pdf",
+                "application/pdf",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_reject_oversized_pdf():
+    response = client.post(
+        "/upload",
+        files={
+            "file": (
+                "large.pdf",
+                b"%PDF-" + b"x" * (10 * 1024 * 1024),
+                "application/pdf",
+            )
+        },
+    )
+
+    assert response.status_code == 413

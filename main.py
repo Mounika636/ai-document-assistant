@@ -1,10 +1,16 @@
 
-from fastapi import FastAPI
+from io import BytesIO
+from chunking import chunk_text
+import pymupdf
+from fastapi import FastAPI, File, HTTPException, UploadFile
 
 app = FastAPI(
     title="AI Document Assistant",
     version="0.1.0"
 )
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 
 @app.get("/")
 def home():
@@ -12,8 +18,63 @@ def home():
         "message": "Welcome to AI Document Assistant"
     }
 
+
 @app.get("/health")
 def health():
+    return {"status": "healthy"}
+
+
+@app.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are supported"
+        )
+
+    contents = await file.read(MAX_FILE_SIZE + 1)
+
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="PDF exceeds the 10 MB upload limit"
+        )
+
+    if not contents.startswith(b"%PDF-"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid PDF file"
+        )
+
+    try:
+        with pymupdf.open(stream=contents, filetype="pdf") as document:
+            pages = [
+                page.get_text(sort=True)
+                for page in document
+            ]
+            page_count = len(document)
+
+    except (pymupdf.FileDataError, ValueError):
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to read PDF file"
+        )
+
+    text = "\n".join(pages).strip()
+
+    if not text:
+        raise HTTPException(
+            status_code=422,
+            detail="No extractable text found in PDF"
+        )
+
+    chunks = chunk_text(text)
+
     return {
-        "status": "healthy"
-    }
+    "filename": file.filename,
+    "pages": page_count,
+    "characters": len(text),
+    "total_chunks": len(chunks),
+    "text_preview": text[:500],
+    "chunk_previews": [chunk[:150] for chunk in chunks[:3]]
+}
