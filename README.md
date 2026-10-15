@@ -63,3 +63,31 @@ python -m pytest -v
 
 ## Status
 Day 1 complete: Backend initialized and tests passing.
+
+## Day 4 Features
+
+- Local LLM integration with Ollama
+- Qwen 2.5 3B for question answering
+- Retrieval-Augmented Generation pipeline
+- POST /ask endpoint
+- AI-generated responses from retrieved document context
+- Source chunk references
+- Automated LLM tests using mocks
+
+## RAG Architecture
+
+PDF Upload
+    ↓
+Text Extraction
+    ↓
+Document Chunking
+    ↓
+Sentence Transformers Embeddings
+    ↓
+ChromaDB Vector Database
+    ↓
+Semantic Retrieval
+    ↓
+Ollama + Qwen 2.5 3B
+    ↓
+AI Answer + Retrieved Sources

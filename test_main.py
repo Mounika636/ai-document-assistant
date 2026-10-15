@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from main import app
 import pytest
 import vector_store
+from unittest.mock import patch
 
 client = TestClient(app)
 
@@ -122,3 +123,53 @@ def test_semantic_search_api():
     assert data["total_results"] == 0
     assert data["results"] == []
 
+
+def test_ask_with_no_documents():
+    response = client.post(
+        "/ask",
+        json={
+            "question": "What is the remote work policy?",
+            "top_k": 3
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["sources"] == []
+    assert response.json()["answer"] == (
+        "No documents have been indexed yet."
+    )
+
+
+@patch("main.generate_answer")
+@patch("main.search_chunks")
+def test_ask_with_documents(mock_search, mock_generate):
+    mock_search.return_value = [
+        {
+            "text": "Employees can work remotely three days.",
+            "document_id": "test-doc",
+            "chunk_index": 0,
+            "similarity": 0.85,
+        }
+    ]
+
+    mock_generate.return_value = (
+        "Employees can work remotely three days per week."
+    )
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "How many remote days are allowed?",
+            "top_k": 3,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "three days" in data["answer"]
+    assert len(data["sources"]) == 1
+    assert data["sources"][0]["document_id"] == "test-doc"
+
+    mock_generate.assert_called_once()

@@ -1,4 +1,5 @@
 from uuid import uuid4
+from llm_service import generate_answer
 from pydantic import BaseModel, Field
 from vector_store import store_chunks, search_chunks
 from io import BytesIO
@@ -107,4 +108,59 @@ def semantic_search(request: SearchRequest):
         "query": request.query,
         "total_results": len(matches),
         "results": matches,
+    }
+
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1)
+    top_k: int = Field(default=3, ge=1, le=10)
+
+
+@app.post("/ask")
+def ask_question(request: AskRequest):
+    """Answer questions using retrieved PDF content."""
+
+    matches = search_chunks(
+        query=request.question,
+        top_k=request.top_k,
+    )
+
+    if not matches:
+        return {
+            "question": request.question,
+            "answer": "No documents have been indexed yet.",
+            "sources": [],
+        }
+
+    context_parts = []
+
+    for index, match in enumerate(matches, start=1):
+        context_parts.append(
+            f"[Source {index}]\n"
+            f"{match['text']}"
+        )
+
+    context = "\n\n".join(context_parts)
+
+    answer = generate_answer(
+        question=request.question,
+        context=context,
+    )
+
+    sources = [
+        {
+            "source": index,
+            "document_id": match["document_id"],
+            "chunk_index": match["chunk_index"],
+            "similarity": match["similarity"],
+            "text": match["text"],
+        }
+        for index, match in enumerate(matches, start=1)
+    ]
+
+    return {
+        "question": request.question,
+        "answer": answer,
+        "sources": sources,
     }
