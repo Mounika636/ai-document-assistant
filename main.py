@@ -1,4 +1,6 @@
-
+from uuid import uuid4
+from pydantic import BaseModel, Field
+from vector_store import store_chunks, search_chunks
 from io import BytesIO
 from chunking import chunk_text
 import pymupdf
@@ -70,11 +72,39 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     chunks = chunk_text(text)
 
+    document_id = uuid4().hex
+
+    store_chunks(
+        document_id=document_id,
+        chunks=chunks
+    )
+
     return {
-    "filename": file.filename,
-    "pages": page_count,
-    "characters": len(text),
-    "total_chunks": len(chunks),
-    "text_preview": text[:500],
-    "chunk_previews": [chunk[:150] for chunk in chunks[:3]]
-}
+        "document_id": document_id,
+        "filename": file.filename,
+        "pages": page_count,
+        "characters": len(text),
+        "total_chunks": len(chunks),
+        "text_preview": text[:500],
+        "chunk_previews": [chunk[:150] for chunk in chunks[:3]],
+        "indexed": True
+    }
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=1)
+    top_k: int = Field(default=3, ge=1, le=20)
+
+
+@app.post("/search")
+def semantic_search(request: SearchRequest):
+    matches = search_chunks(
+        query=request.query,
+        top_k=request.top_k,
+    )
+
+    return {
+        "query": request.query,
+        "total_results": len(matches),
+        "results": matches,
+    }

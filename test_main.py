@@ -2,8 +2,21 @@ from io import BytesIO
 import pymupdf
 from fastapi.testclient import TestClient
 from main import app
+import pytest
+import vector_store
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def isolated_vector_database(tmp_path, monkeypatch):
+    """Use a temporary ChromaDB directory for each API test."""
+    monkeypatch.setattr(
+        vector_store,
+        "DB_PATH",
+        tmp_path / "chroma_db"
+    )
+
 
 
 def test_home():
@@ -89,3 +102,23 @@ def test_reject_oversized_pdf():
     )
 
     assert response.status_code == 413
+
+
+    
+def test_semantic_search_api():
+    response = client.post(
+        "/search",
+        json={
+            "query": "What are the technical skills?",
+            "top_k": 3
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["query"] == "What are the technical skills?"
+    assert data["total_results"] == 0
+    assert data["results"] == []
+

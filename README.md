@@ -6,21 +6,28 @@ application built using Python and FastAPI.
 
 ## Current Features
 
-- REST API using FastAPI
-- PDF upload with file validation (10 MB limit)
-- PDF text extraction using PyMuPDF
-- Document chunking with configurable overlap
-- Text and chunk previews
-- Automated testing with Pytest (12 passing tests)
-- Interactive Swagger API documentation
+- PDF upload and text extraction using PyMuPDF
+- Document chunking with overlap
+- Local text embeddings using Sentence Transformers
+- Persistent vector database using ChromaDB
+- Semantic similarity search
+- FastAPI REST endpoints
+- Automated tests with Pytest
+
+## API Endpoints
+
+- GET / - Application information
+- GET /health - Health check
+- POST /upload - Upload, process and index a PDF
+- POST /search - Search indexed document chunks
 
 ## Upcoming Features
 
-- Semantic embeddings
-- ChromaDB vector search
 - LLM-powered question answering
-- Source citations
-- Docker containerization
+- Page-level source citations
+- Document filtering
+- RAG evaluation
+- Docker deployment
 - GitHub Actions CI/CD
 
 ## Planned Features
