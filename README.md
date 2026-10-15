@@ -5,10 +5,23 @@ A production-style Retrieval-Augmented Generation (RAG)
 application built using Python and FastAPI.
 
 ## Current Features
-- FastAPI backend
-- Health-check endpoint
+
+- REST API using FastAPI
+- PDF upload with file validation (10 MB limit)
+- PDF text extraction using PyMuPDF
+- Document chunking with configurable overlap
+- Text and chunk previews
+- Automated testing with Pytest (12 passing tests)
 - Interactive Swagger API documentation
-- Automated API tests using Pytest
+
+## Upcoming Features
+
+- Semantic embeddings
+- ChromaDB vector search
+- LLM-powered question answering
+- Source citations
+- Docker containerization
+- GitHub Actions CI/CD
 
 ## Planned Features
 - PDF document upload
