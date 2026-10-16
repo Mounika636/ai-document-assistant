@@ -91,3 +91,24 @@ Semantic Retrieval
 Ollama + Qwen 2.5 3B
     ↓
 AI Answer + Retrieved Sources
+
+
+## Day 5 - Streamlit Chat Interface
+
+- Interactive AI chatbot built with Streamlit
+- PDF upload and document processing
+- Document-specific semantic search
+- Qwen 2.5 3B question answering through Ollama
+- Retrieved source passages
+- Session-based chat history
+- Automated backend tests
+
+## Run the Application
+
+Start FastAPI:
+python -m uvicorn main:app --reload
+
+Start Streamlit in another terminal:
+python -m streamlit run frontend/app.py
+
+Open: http://localhost:8501

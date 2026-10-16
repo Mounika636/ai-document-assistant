@@ -124,20 +124,22 @@ def test_semantic_search_api():
     assert data["results"] == []
 
 
+
 def test_ask_with_no_documents():
     response = client.post(
         "/ask",
         json={
             "question": "What is the remote work policy?",
-            "top_k": 3
-        }
+            "top_k": 3,
+        },
     )
 
     assert response.status_code == 200
     assert response.json()["sources"] == []
     assert response.json()["answer"] == (
-        "No documents have been indexed yet."
+        "No matching document content was found."
     )
+
 
 
 @patch("main.generate_answer")

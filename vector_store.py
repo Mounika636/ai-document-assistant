@@ -53,24 +53,65 @@ def store_chunks(
     return len(chunks)
 
 
+
 def search_chunks(
     query: str,
     top_k: int = 3,
     db_path=None,
+    document_id: str | None = None,
 ):
-    """Find the most relevant stored chunks."""
+    """Find relevant chunks, optionally within one document."""
+
+    if top_k < 1:
+        raise ValueError("top_k must be at least 1")
+
     collection = get_collection(db_path)
 
     if collection.count() == 0:
         return []
 
+    # Restrict search to the selected document.
+    where_filter = (
+        {"document_id": document_id}
+        if document_id
+        else None
+    )
+
+    if document_id:
+        available = collection.get(
+            where=where_filter,
+            include=[],
+        )
+
+        if not available["ids"]:
+            return []
+
+        result_count = min(
+            top_k,
+            len(available["ids"]),
+        )
+    else:
+        result_count = min(
+            top_k,
+            collection.count(),
+        )
+
     query_embedding = generate_embeddings([query])[0]
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=min(top_k, collection.count()),
-        include=["documents", "metadatas", "distances"],
-    )
+    query_args = {
+        "query_embeddings": [query_embedding],
+        "n_results": result_count,
+        "include": [
+            "documents",
+            "metadatas",
+            "distances",
+        ],
+    }
+
+    if where_filter:
+        query_args["where"] = where_filter
+
+    results = collection.query(**query_args)
 
     matches = []
 

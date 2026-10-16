@@ -52,3 +52,33 @@ def test_empty_chunks(tmp_path):
     )
 
     assert count == 0
+
+
+
+def test_search_specific_document(tmp_path):
+    store_chunks(
+        document_id="document_a",
+        chunks=[
+            "Employees can work remotely three days per week."
+        ],
+        db_path=tmp_path,
+    )
+
+    store_chunks(
+        document_id="document_b",
+        chunks=[
+            "The company provides free lunch every Friday."
+        ],
+        db_path=tmp_path,
+    )
+
+    results = search_chunks(
+        query="What does the company provide?",
+        top_k=3,
+        db_path=tmp_path,
+        document_id="document_b",
+    )
+
+    assert len(results) == 1
+    assert results[0]["document_id"] == "document_b"
+    assert "free lunch" in results[0]["text"]

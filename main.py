@@ -112,24 +112,27 @@ def semantic_search(request: SearchRequest):
 
 
 
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=1)
     top_k: int = Field(default=3, ge=1, le=10)
+    document_id: str | None = None
 
 
 @app.post("/ask")
 def ask_question(request: AskRequest):
-    """Answer questions using retrieved PDF content."""
+    """Answer questions using the selected PDF."""
 
     matches = search_chunks(
         query=request.question,
         top_k=request.top_k,
+        document_id=request.document_id,
     )
 
     if not matches:
         return {
             "question": request.question,
-            "answer": "No documents have been indexed yet.",
+            "answer": "No matching document content was found.",
             "sources": [],
         }
 
@@ -137,8 +140,7 @@ def ask_question(request: AskRequest):
 
     for index, match in enumerate(matches, start=1):
         context_parts.append(
-            f"[Source {index}]\n"
-            f"{match['text']}"
+            f"[Source {index}]\n{match['text']}"
         )
 
     context = "\n\n".join(context_parts)
