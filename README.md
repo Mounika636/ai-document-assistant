@@ -1,114 +1,171 @@
+# AI Document Assistant — Local RAG Application
 
-# AI Document Assistant
+A document question-answering application built with **Python, FastAPI, Streamlit, ChromaDB, Sentence Transformers, and Ollama**.
 
-A production-style Retrieval-Augmented Generation (RAG)
-application built using Python and FastAPI.
+Users can upload PDF documents, ask natural-language questions, and receive AI-generated answers supported by retrieved document passages and PDF page references.
 
-## Current Features
+## Features
 
 - PDF upload and text extraction using PyMuPDF
-- Document chunking with overlap
-- Local text embeddings using Sentence Transformers
-- Persistent vector database using ChromaDB
-- Semantic similarity search
-- FastAPI REST endpoints
-- Automated tests with Pytest
+- Page-aware text chunking
+- Semantic embeddings using `all-MiniLM-L6-v2`
+- Persistent vector storage using ChromaDB
+- Semantic document retrieval
+- Local answer generation using Ollama and Qwen 2.5 3B
+- Streamlit chatbot interface
+- Source filenames and page-number references
+- Document-specific retrieval filtering
+- Docker Compose deployment
+- Automated Python tests with GitHub Actions
+- Reproducible RAG evaluation script
 
-## API Endpoints
+## System Architecture
 
-- GET / - Application information
-- GET /health - Health check
-- POST /upload - Upload, process and index a PDF
-- POST /search - Search indexed document chunks
-
-## Upcoming Features
-
-- LLM-powered question answering
-- Page-level source citations
-- Document filtering
-- RAG evaluation
-- Docker deployment
-- GitHub Actions CI/CD
-
-## Planned Features
-- PDF document upload
-- Document processing and chunking
-- Vector embeddings and semantic search
-- ChromaDB vector database
-- LLM-powered question answering
-- Source citations
-- Docker deployment
-- GitHub Actions CI/CD
-
-## Tech Stack
-Python 3.12 | FastAPI | Pytest
-
-## Getting Started
-
-1. Create a Python 3.12 virtual environment.
-2. Activate the virtual environment.
-3. Install dependencies:
-
-   pip install -r requirements.txt
-
-4. Start the application:
-
-   python -m uvicorn main:app --reload
-
-5. Open http://127.0.0.1:8000/docs
-
-## Run Tests
-
-python -m pytest -v
-
-## Status
-Day 1 complete: Backend initialized and tests passing.
-
-## Day 4 Features
-
-- Local LLM integration with Ollama
-- Qwen 2.5 3B for question answering
-- Retrieval-Augmented Generation pipeline
-- POST /ask endpoint
-- AI-generated responses from retrieved document context
-- Source chunk references
-- Automated LLM tests using mocks
-
-## RAG Architecture
-
-PDF Upload
-    ↓
-Text Extraction
-    ↓
-Document Chunking
-    ↓
-Sentence Transformers Embeddings
-    ↓
-ChromaDB Vector Database
-    ↓
-Semantic Retrieval
-    ↓
+```text
+User
+  |
+  v
+Streamlit Frontend
+  |
+  v
+FastAPI Backend
+  |
+  +--> PDF Extraction + Page-Aware Chunking
+  |          |
+  |          v
+  |    Sentence Transformers
+  |          |
+  |          v
+  |       ChromaDB
+  |          |
+  |          v
+  +---- Semantic Retrieval
+  |
+  v
 Ollama + Qwen 2.5 3B
-    ↓
-AI Answer + Retrieved Sources
+  |
+  v
+Answer + Retrieved PDF Sources
+```
 
+## Technology Stack
 
-## Day 5 - Streamlit Chat Interface
+| Component | Technology |
+|---|---|
+| Programming language | Python 3.12 |
+| Backend | FastAPI |
+| Frontend | Streamlit |
+| PDF processing | PyMuPDF |
+| Embeddings | Sentence Transformers |
+| Vector database | ChromaDB |
+| LLM inference | Ollama + Qwen 2.5 3B |
+| Containerization | Docker Compose |
+| Testing | pytest |
+| Continuous integration | GitHub Actions |
 
-- Interactive AI chatbot built with Streamlit
-- PDF upload and document processing
-- Document-specific semantic search
-- Qwen 2.5 3B question answering through Ollama
-- Retrieved source passages
-- Session-based chat history
-- Automated backend tests
+## Running Locally with Docker
 
-## Run the Application
+### Prerequisites
 
-Start FastAPI:
-python -m uvicorn main:app --reload
+- Docker Desktop
+- Ollama installed on the host computer
+- Qwen 2.5 3B model downloaded
 
-Start Streamlit in another terminal:
-python -m streamlit run frontend/app.py
+Download the model:
 
-Open: http://localhost:8501
+```bash
+ollama pull qwen2.5:3b
+```
+
+Start Ollama if it is not already running.
+
+Start the application:
+
+```bash
+docker compose up -d --build
+```
+
+Access the application:
+
+- Streamlit: http://localhost:8501
+- FastAPI documentation: http://localhost:8000/docs
+
+The backend connects to Ollama through `host.docker.internal:11434`. Host accessibility may require additional configuration depending on the Docker and Ollama environment.
+
+Stop the application:
+
+```bash
+docker compose down
+```
+
+ChromaDB data and the embedding-model cache are preserved in Docker volumes.
+
+## Running Tests
+
+Install the dependencies in a Python 3.12 environment:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the automated test suite:
+
+```bash
+python -m pytest -v
+```
+
+The project currently has **25 passing tests**, including a test verifying accurate storage of PDF page numbers.
+
+GitHub Actions also runs automated tests on pushes and pull requests to the main branch.
+
+## RAG Evaluation
+
+The evaluation uses a two-page synthetic company-policy PDF and three questions:
+
+1. Remote work allowance — expected answer: three days per week.
+2. Annual leave allowance — expected answer: twenty days.
+3. Annual revenue — not provided in the PDF; the assistant should abstain.
+
+Generate the evaluation document:
+
+```bash
+python evaluation/create_sample_pdf.py
+```
+
+With the API and Ollama running, execute:
+
+```bash
+python evaluation/evaluate.py
+```
+
+### Measured Baseline
+
+| Metric | Result |
+|---|---|
+| Answer checks | 3/3 (100%) |
+| Expected-page retrieval | 2/2 (100%) |
+| Unanswerable question handling | 1/1 passed |
+
+**Evaluation limitations:** These results are from a small synthetic dataset, not a production benchmark. Answer checks use simple keyword matching, and retrieval is considered successful when the expected page appears anywhere in the returned source passages. No independent LLM-as-judge or human factuality assessment has been performed.
+
+## Current Limitations
+
+- Supports text-extractable PDFs; no OCR for scanned documents
+- No user authentication or tenant-level document isolation
+- Depends on a locally running Ollama instance
+- Source references identify retrieved passages, but do not guarantee every generated statement is supported
+- Evaluation dataset is intentionally small and illustrative
+- Not hardened for public production deployment
+
+## Potential Improvements
+
+- Larger evaluation dataset with retrieval ranking metrics
+- Stronger groundedness and hallucination evaluation
+- Hybrid retrieval and reranking
+- OCR support
+- Authentication and secure multi-user document isolation
+- Cloud deployment and monitoring
+
+## Project Purpose
+
+This project demonstrates practical experience building and testing a Retrieval-Augmented Generation (RAG) system, connecting machine learning components through backend APIs, packaging services with Docker, and integrating automated tests into a CI workflow.

@@ -63,6 +63,7 @@ async def upload_pdf(file: UploadFile = File(...)):
             detail="Unable to read PDF file"
         )
 
+    
     text = "\n".join(pages).strip()
 
     if not text:
@@ -71,13 +72,25 @@ async def upload_pdf(file: UploadFile = File(...)):
             detail="No extractable text found in PDF"
         )
 
-    chunks = chunk_text(text)
+    # Create chunks separately for each PDF page
+    chunks = []
+    page_numbers = []
+
+    for page_number, page_text in enumerate(pages, start=1):
+        page_chunks = chunk_text(page_text)
+
+        chunks.extend(page_chunks)
+        page_numbers.extend(
+            [page_number] * len(page_chunks)
+        )
 
     document_id = uuid4().hex
 
     store_chunks(
         document_id=document_id,
-        chunks=chunks
+        chunks=chunks,
+        page_numbers=page_numbers,
+        filename=file.filename,
     )
 
     return {
@@ -155,12 +168,13 @@ def ask_question(request: AskRequest):
             "source": index,
             "document_id": match["document_id"],
             "chunk_index": match["chunk_index"],
+            "page_number": match.get("page_number", 0),
+            "filename": match.get("filename", "unknown.pdf"),
             "similarity": match["similarity"],
             "text": match["text"],
         }
         for index, match in enumerate(matches, start=1)
     ]
-
     return {
         "question": request.question,
         "answer": answer,

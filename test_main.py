@@ -175,3 +175,64 @@ def test_ask_with_documents(mock_search, mock_generate):
     assert data["sources"][0]["document_id"] == "test-doc"
 
     mock_generate.assert_called_once()
+
+
+def test_upload_preserves_page_numbers():
+    document = pymupdf.open()
+
+    page1 = document.new_page()
+    page1.insert_text(
+        (72, 72),
+        "Employees can work remotely three days per week."
+    )
+
+    page2 = document.new_page()
+    page2.insert_text(
+        (72, 72),
+        "Employees receive twenty days of annual leave."
+    )
+
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    response = client.post(
+        "/upload",
+        files={
+            "file": (
+                "company_policy.pdf",
+                BytesIO(pdf_bytes),
+                "application/pdf",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    document_id = data["document_id"]
+
+    import vector_store
+
+    collection = vector_store.get_collection()
+
+    stored = collection.get(
+        where={"document_id": document_id},
+        include=["documents", "metadatas"],
+    )
+
+    assert len(stored["ids"]) == 2
+
+    page_mapping = {
+        metadata["page_number"]: text
+        for text, metadata in zip(
+            stored["documents"],
+            stored["metadatas"],
+        )
+    }
+
+    assert "remotely" in page_mapping[1]
+    assert "annual leave" in page_mapping[2]
+    assert all(
+        metadata["filename"] == "company_policy.pdf"
+        for metadata in stored["metadatas"]
+    )

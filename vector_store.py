@@ -21,14 +21,21 @@ def get_collection(db_path=None):
     )
 
 
+
 def store_chunks(
     document_id: str,
     chunks: list[str],
     db_path=None,
+    page_numbers: list[int] | None = None,
+    filename: str | None = None,
 ):
-    """Generate embeddings and store document chunks."""
+    """Store document chunks with page metadata."""
+
     if not chunks:
         return 0
+
+    if page_numbers is not None and len(page_numbers) != len(chunks):
+        raise ValueError("page_numbers must match chunks length")
 
     collection = get_collection(db_path)
     embeddings = generate_embeddings(chunks)
@@ -39,7 +46,16 @@ def store_chunks(
     ]
 
     metadatas = [
-        {"document_id": document_id, "chunk_index": i}
+        {
+            "document_id": document_id,
+            "chunk_index": i,
+            "page_number": (
+                page_numbers[i]
+                if page_numbers is not None
+                else 0
+            ),
+            "filename": filename or "unknown.pdf",
+        }
         for i in range(len(chunks))
     ]
 
@@ -51,6 +67,7 @@ def store_chunks(
     )
 
     return len(chunks)
+
 
 
 
@@ -124,6 +141,8 @@ def search_chunks(
             "text": text,
             "document_id": metadata["document_id"],
             "chunk_index": metadata["chunk_index"],
+            "page_number": metadata.get("page_number", 0),
+            "filename": metadata.get("filename", "unknown.pdf"),
             "similarity": round(1 - distance, 4),
         })
 

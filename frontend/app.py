@@ -132,13 +132,20 @@ if question:
 
                 if sources:
                     with st.expander("View Sources"):
-                        for source in sources:
-                            st.markdown(
-                                f"**Source {source['source']}** "
-                                f"— Similarity: "
-                                f"{source['similarity']:.3f}"
-                            )
-                            st.write(source["text"])
+                        for index, source in enumerate(sources, start=1):
+                            filename = source.get("filename", "Unknown document")
+                            page_number = source.get("page_number", 0)
+                            source_text = source.get("text", "")
+
+                            if page_number > 0:
+                                citation = f"Source {index}: {filename} — Page {page_number}"
+                            else:
+                                citation = f"Source {index}: {filename} — Page unavailable"
+
+                            st.markdown(f"**{citation}**")
+                            st.write(source_text)
+                            st.divider()
+
 
                 st.session_state.messages.append({
                     "role": "assistant",
