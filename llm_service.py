@@ -1,9 +1,12 @@
 
+import os
 from ollama import Client
 
 MODEL_NAME = "qwen2.5:3b"
 
-client = Client(host="http://localhost:11434")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST","http://localhost:11434")
+
+client = Client(host=OLLAMA_HOST)
 
 
 def generate_answer(question: str, context: str) -> str:
